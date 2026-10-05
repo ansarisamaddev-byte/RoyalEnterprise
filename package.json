@@ -1,0 +1,12 @@
+{
+  "name": "royal-enterprise",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm install --prefix server && npm install --include=dev --prefix client && npm run build --prefix client",
+    "start": "node server/src/index.js"
+  }
+}
