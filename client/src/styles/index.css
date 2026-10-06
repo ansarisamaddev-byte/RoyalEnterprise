@@ -31,6 +31,7 @@ p { margin: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 .page { padding: 16px 0 40px; }
+.container.page { padding-inline: 16px; }
 .page-title { font-size: 22px; font-weight: 700; }
 .muted { color: var(--muted); }
 .row { display: flex; align-items: center; gap: 8px; }
@@ -126,7 +127,7 @@ body { padding-bottom: 62px; }
 .hero-art svg { width: 100%; height: auto; max-height: 240px; }
 
 .trust { background: #fff; border-bottom: 1px solid var(--line); }
-.trust-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 8px; padding: 14px 0; }
+.trust-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 8px; padding-block: 14px; }
 .trust-item { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--navy); }
 .trust-item .icon { color: var(--navy); }
 
@@ -276,10 +277,12 @@ body { padding-bottom: 62px; }
 .person:last-child { border-bottom: 0; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--navy); color: var(--gold); display: grid; place-items: center; font-weight: 700; }
 .site-footer { margin-top: 30px; background: var(--navy); color: #c5d0e6; font-size: 13px; }
-.footer-grid { display: grid; gap: 20px; padding: 28px 0; grid-template-columns: 1fr; }
+.footer-grid { display: grid; gap: 20px; padding-block: 28px; grid-template-columns: 1fr; }
+.site-footer .container { padding-inline: clamp(20px, 4vw, 24px); }
 .site-footer h4 { color: #fff; font-size: 13px; margin-bottom: 8px; }
 .site-footer a:hover { color: #fff; }
 .footer-links { display: flex; flex-direction: column; gap: 6px; }
+.footer-links > * { min-width: 0; overflow-wrap: anywhere; }
 .footer-bottom { border-top: 1px solid rgba(255,255,255,.12); padding: 12px 0; font-size: 12px; color: #8d9ab5; }
 .api-banner { background: var(--red-bg); color: #991b1b; padding: 8px 16px; text-align: center; font-size: 13px; }
 
@@ -297,6 +300,7 @@ body { padding-bottom: 62px; }
   body { padding-bottom: 0; }
   .bottom-nav { display: none; }
   .container { padding: 0 24px; }
+  .container.page { padding-inline: 24px; }
   .header-main { height: 64px; gap: 24px; }
   .search-form { display: block; }
   .mobile-search, .search-toggle { display: none; }
