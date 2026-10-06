@@ -283,7 +283,8 @@ body { padding-bottom: 62px; }
 .site-footer a:hover { color: #fff; }
 .footer-links { display: flex; flex-direction: column; gap: 6px; }
 .footer-links > * { min-width: 0; overflow-wrap: anywhere; }
-.footer-bottom { border-top: 1px solid rgba(255,255,255,.12); padding: 12px 0; font-size: 12px; color: #8d9ab5; }
+.footer-brand p { max-width: 320px; margin-top: 12px; line-height: 1.7; color: #b7c0d4; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.12); padding: 14px 0; font-size: 12px; color: #8d9ab5; }
 .api-banner { background: var(--red-bg); color: #991b1b; padding: 8px 16px; text-align: center; font-size: 13px; }
 
 /* ---------- tablet & up ---------- */
@@ -337,7 +338,15 @@ body { padding-bottom: 62px; }
   .cart-row .row-price { color: var(--ink); font-size: 14px; font-weight: 600; }
   .cart-row .row-total { margin-left: 0; }
   .cart-mobile-only { display: none; }
-  .footer-grid { grid-template-columns: 1.5fr 1fr 1.3fr; }
+  .footer-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(140px, .7fr) minmax(0, 1.1fr);
+    align-items: start;
+    column-gap: clamp(32px, 5vw, 64px);
+    row-gap: 32px;
+    padding-block: 40px;
+  }
+  .site-footer h4 { margin-bottom: 12px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .footer-links { gap: 10px; line-height: 1.6; }
   .timeline { flex-direction: row; }
   .tl-step { flex: 1; flex-direction: column; align-items: center; text-align: center; padding-bottom: 0; gap: 8px; }
   .tl-step::before { left: 50%; right: -50%; top: 11px; bottom: auto; width: auto; height: 2px; }

@@ -89,11 +89,11 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
-        <div>
+        <div className="footer-brand">
           <Logo light />
-          <p style={{ marginTop: 10, maxWidth: 300 }}>Genuine products, best prices and friendly local support.</p>
+          <p>Genuine products, best prices and friendly local support.</p>
         </div>
-        <div>
+        <div className="footer-column">
           <h4>Quick Links</h4>
           <div className="footer-links">
             <Link to="/mobiles">Mobiles</Link>
@@ -102,7 +102,7 @@ function Footer() {
             <Link to="/track-order">Track Order</Link>
           </div>
         </div>
-        <div>
+        <div className="footer-column">
           <h4>Visit / Contact</h4>
           <div className="footer-links">
             {s.store_address && <span>{s.store_address}</span>}
