@@ -4,21 +4,26 @@ import { HttpError } from '../../utils/httpError.js';
 const SESSION_TTL = 12 * 60 * 60;
 
 function getConfig() {
+  const username = process.env.ADMIN_USERNAME || 'admin';
   const password = process.env.ADMIN_PASSWORD;
   const secret = process.env.ADMIN_SESSION_SECRET;
   if (!password || !secret) throw new HttpError(503, 'Admin access is not configured on this server');
-  return { password, secret };
+  return { username, password, secret };
 }
 
 function sign(payload, secret) {
   return createHmac('sha256', secret).update(payload).digest('base64url');
 }
 
-export function createSession(password) {
-  const { password: expected, secret } = getConfig();
+export function createSession(username, password) {
+  const { username: expectedUsername, password: expected, secret } = getConfig();
+  const suppliedUsernameHash = createHash('sha256').update(String(username ?? '')).digest();
+  const expectedUsernameHash = createHash('sha256').update(expectedUsername).digest();
   const suppliedHash = createHash('sha256').update(String(password ?? '')).digest();
   const expectedHash = createHash('sha256').update(expected).digest();
-  if (!timingSafeEqual(suppliedHash, expectedHash)) throw new HttpError(401, 'Invalid admin password');
+  if (!timingSafeEqual(suppliedUsernameHash, expectedUsernameHash) || !timingSafeEqual(suppliedHash, expectedHash)) {
+    throw new HttpError(401, 'Invalid admin username or password');
+  }
 
   const payload = Buffer.from(JSON.stringify({
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL,

@@ -1,5 +1,6 @@
 import { supabase } from '../../config/supabase.js';
 import { HttpError, unwrap } from '../../utils/httpError.js';
+import { sendOrderTemplate } from '../../services/whatsappService.js';
 
 const PRODUCT_FIELDS = [
   'name', 'slug', 'category_id', 'subcategory_id', 'brand', 'description', 'price', 'original_price',
@@ -60,7 +61,7 @@ export async function getOverview() {
 
 export async function listProducts() {
   return unwrap(await supabase.from('products')
-    .select('id,name,slug,brand,price,stock,is_active,is_featured,thumbnail_url,category:categories(name)')
+    .select('id,name,slug,brand,description,price,original_price,discount,stock,sku,thumbnail_url,image_urls,highlights,badge,is_active,is_featured,category_id,subcategory_id,category:categories(name)')
     .order('created_at', { ascending: false }).limit(200));
 }
 
@@ -105,7 +106,7 @@ export async function deleteSubcategory(categoryId, id) {
 
 export async function listOrders() {
   return unwrap(await supabase.from('orders')
-    .select('id,order_code,customer_name,mobile,whatsapp,email,address,area,city,pincode,note,subtotal,delivery_charge,total,order_status,payment_status,created_at,updated_at,order_items(id,product_name,thumbnail_url,unit_price,quantity,line_total)')
+    .select('id,order_code,customer_name,mobile,whatsapp,whatsapp_opt_in,email,address,area,city,pincode,note,subtotal,delivery_charge,total,order_status,payment_status,created_at,updated_at,order_items(id,product_name,thumbnail_url,unit_price,quantity,line_total)')
     .order('created_at', { ascending: false }).limit(100));
 }
 
@@ -158,7 +159,7 @@ export async function createTab(body) {
 export async function listProductEntries(productId, resource) {
   const config = PRODUCT_ENTRY_FIELDS[resource];
   if (!config) throw new HttpError(404, 'Product information section not found');
-  return unwrap(await supabase.from(config.table).select('*').eq('product_id', productId).order('sort_order', { ascending: true }));
+  return unwrap(await supabase.from(config.table).select('*').eq('product_id', productId));
 }
 
 export async function saveProductEntry(productId, resource, entryId, body) {
@@ -197,4 +198,17 @@ export async function saveTemplate(key, body) {
   if (Object.hasOwn(data, 'body')) data.body = requireText(data.body, 'Template message');
   if (!Object.keys(data).length) throw new HttpError(400, 'No template fields provided');
   return unwrap(await supabase.from('admin_message_templates').update(data).eq('key', key).select('*').single());
+}
+
+export async function sendOrderMessage(id, key) {
+  const order = unwrap(await supabase.from('orders')
+    .select('id,order_code,customer_name,mobile,whatsapp,whatsapp_opt_in,total,order_status,payment_status')
+    .eq('id', id).maybeSingle());
+  if (!order) throw new HttpError(404, 'Order not found');
+  if (!order.whatsapp_opt_in) throw new HttpError(403, 'The customer has not opted in to WhatsApp messages');
+  const rows = unwrap(await supabase.from('order_items')
+    .select('product_name,quantity,line_total')
+    .eq('order_id', id).order('created_at'));
+  const items = rows.map((item) => ({ name: item.product_name, quantity: item.quantity, line_total: item.line_total }));
+  return sendOrderTemplate({ ...order, items }, key);
 }

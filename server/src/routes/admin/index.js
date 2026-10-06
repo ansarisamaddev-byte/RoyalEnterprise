@@ -29,6 +29,7 @@ router.delete('/categories/:id/subcategories/:subId', admin.deleteSubcategory);
 
 router.get('/orders', admin.orders);
 router.patch('/orders/:id', admin.updateOrder);
+router.post('/orders/:id/messages', admin.sendOrderMessage);
 
 router.get('/settings', admin.settings);
 router.patch('/settings', admin.updateSettings);

@@ -9,7 +9,8 @@ function bodyOf(req) {
 }
 
 export const login = asyncHandler(async (req, res) => {
-  const session = createSession(bodyOf(req).password);
+  const { username, password } = bodyOf(req);
+  const session = createSession(username, password);
   res.json(session);
 });
 
@@ -33,6 +34,7 @@ export const deleteSubcategory = asyncHandler(async (req, res) => { await servic
 
 export const orders = asyncHandler(async (req, res) => res.json({ orders: await service.listOrders() }));
 export const updateOrder = asyncHandler(async (req, res) => res.json(await service.updateOrder(req.params.id, bodyOf(req))));
+export const sendOrderMessage = asyncHandler(async (req, res) => res.json(await service.sendOrderMessage(req.params.id, bodyOf(req).key)));
 export const settings = asyncHandler(async (req, res) => res.json({ settings: await service.getSettings() }));
 export const updateSettings = asyncHandler(async (req, res) => res.json({ settings: await service.saveSettings(bodyOf(req)) }));
 export const tabs = asyncHandler(async (req, res) => res.json({ tabs: await service.listTabs() }));

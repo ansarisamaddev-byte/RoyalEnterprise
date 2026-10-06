@@ -140,9 +140,11 @@ create table if not exists orders (
     ('ORDER_PLACED','CONFIRMED','PROCESSING','OUT_FOR_DELIVERY','DELIVERED','CUSTOMER_CANCELLED','CANCELLED','OUT_OF_STOCK')),
   payment_status text not null default 'PAYMENT_PENDING' check (payment_status in
     ('PAYMENT_PENDING','PAYMENT_RECEIVED','REFUNDED')),
+  whatsapp_opt_in boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table orders add column if not exists whatsapp_opt_in boolean not null default false;
 create index if not exists orders_mobile_idx on orders(mobile);
 create index if not exists orders_created_idx on orders(created_at desc);
 drop trigger if exists orders_updated on orders;
