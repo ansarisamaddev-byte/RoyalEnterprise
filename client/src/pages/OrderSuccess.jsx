@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import { ErrorState, Loading } from '../components/States.jsx';
@@ -11,6 +11,7 @@ import { buildOrderMessage, waLink } from '../utils/whatsapp.js';
 
 export default function OrderSuccess() {
   const { orderId } = useParams();
+  const location = useLocation();
   const [params] = useSearchParams();
   const token = params.get('t');
   const { settings, orderPlacedTemplate } = useSettings();
@@ -27,6 +28,7 @@ export default function OrderSuccess() {
   const message = buildOrderMessage(o, orderPlacedTemplate);
   const toMe = waLink(o.whatsapp || o.mobile, message);
   const toStore = waLink(settings.store_whatsapp, `Hello ${settings.store_name}, I just placed order ${o.order_code} (${formatINR(o.total)}). Please confirm.`);
+  const whatsappStatus = location.state?.whatsappDelivery?.status;
 
   return (
     <div className="container page success-wrap">
@@ -68,8 +70,20 @@ export default function OrderSuccess() {
         Our team will contact you shortly to confirm payment and delivery.
       </div>
 
+      <div className={`alert ${whatsappStatus === 'sent' ? 'alert-note' : 'alert-error'}`} style={{ marginTop: 10 }} role="status">
+        {whatsappStatus === 'sent'
+          ? 'Your order confirmation was submitted to WhatsApp Business for delivery.'
+          : whatsappStatus === 'not_requested'
+            ? 'WhatsApp confirmation was not requested. You can share the order details below.'
+            : whatsappStatus === 'not_configured'
+              ? 'Automatic WhatsApp delivery is not configured yet. You can share the confirmation below.'
+              : whatsappStatus === 'failed'
+                ? 'We could not send the automatic WhatsApp confirmation. Your order is safe; you can share it below.'
+                : 'Your order is confirmed. Use the WhatsApp option below to share the details.'}
+      </div>
+
       <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-        <a className="btn btn-green-solid btn-lg" href={toMe} target="_blank" rel="noopener noreferrer"><Icon name="whatsapp" size={18} />Save confirmation on WhatsApp</a>
+        <a className="btn btn-green-solid btn-lg" href={toMe} target="_blank" rel="noopener noreferrer"><Icon name="whatsapp" size={18} />Share order on WhatsApp</a>
         {settings.store_whatsapp && <a className="btn btn-green" href={toStore} target="_blank" rel="noopener noreferrer">Chat with {settings.store_name}</a>}
         <Link className="btn btn-primary btn-lg" to={`/track-order?id=${o.order_code}`}>Track My Order</Link>
         <Link className="btn btn-outline" to="/">Continue Shopping</Link>

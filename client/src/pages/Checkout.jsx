@@ -37,6 +37,7 @@ export default function Checkout() {
   const nav = useNavigate();
   const [f, setF] = useState(EMPTY);
   const [sameWa, setSameWa] = useState(true);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [errors, setErrors] = useState({});
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState('');
@@ -60,10 +61,11 @@ export default function Checkout() {
       const order = await api.createOrder({
         ...f,
         whatsapp: sameWa ? f.mobile : f.whatsapp,
+        whatsappOptIn,
         items: items.map((i) => ({ productId: i.id, quantity: i.qty })),
       });
       clear();
-      nav(`/order-success/${order.order_code}?t=${order.access_token}`, { replace: true });
+      nav(`/order-success/${order.order_code}?t=${order.access_token}`, { replace: true, state: { whatsappDelivery: order.whatsapp_delivery } });
     } catch (err) {
       setPlacing(false);
       if (err.fields) setErrors(err.fields);
@@ -110,8 +112,9 @@ export default function Checkout() {
           ))}
           <div style={{ marginTop: 8 }}><Summary subtotal={subtotal} delivery={delivery} total={total} /></div>
           <div className="alert alert-note" style={{ margin: '12px 0' }}>
-            <Icon name="whatsapp" size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />No online payment now. After you place the order, our team will contact you on WhatsApp to confirm payment and delivery.
+            <Icon name="whatsapp" size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />No online payment now. Our team will contact you to confirm payment and delivery.
           </div>
+          <label className="checkbox" style={{ alignItems: 'flex-start', marginBottom: 12 }}><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} /><span>Send my order confirmation and updates to my WhatsApp number. I agree to receive transactional messages.</span></label>
           <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={placing}>{placing ? 'Placing order...' : `Place Order · ${formatINR(total)}`}</button>
         </aside>
       </form>

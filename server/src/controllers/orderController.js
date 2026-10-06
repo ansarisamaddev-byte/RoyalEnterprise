@@ -1,6 +1,7 @@
 import { asyncHandler, HttpError } from '../utils/httpError.js';
 import { normalizeMobile } from '../utils/phone.js';
 import { createOrder, getOrderWithToken, trackOrder } from '../services/orderService.js';
+import { sendOrderTemplate } from '../services/whatsappService.js';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -32,12 +33,16 @@ function validate(b) {
   if (!cleanItems.length) f.items = 'Your cart is empty';
 
   if (Object.keys(f).length) throw new HttpError(400, 'Please fix the highlighted fields', f);
-  return { fullName, mobile, whatsapp, email, address, area, city, pincode, note, items: cleanItems };
+  return { fullName, mobile, whatsapp, email, address, area, city, pincode, note, items: cleanItems, whatsappOptIn: b.whatsappOptIn === true };
 }
 
 export const create = asyncHandler(async (req, res) => {
-  const order = await createOrder(validate(req.body || {}));
-  res.status(201).json(order);
+  const input = validate(req.body || {});
+  const order = await createOrder(input);
+  const whatsappDelivery = input.whatsappOptIn
+    ? await sendOrderTemplate(order, 'order_placed')
+    : { status: 'not_requested' };
+  res.status(201).json({ ...order, whatsapp_delivery: whatsappDelivery });
 });
 
 export const get = asyncHandler(async (req, res) => {
