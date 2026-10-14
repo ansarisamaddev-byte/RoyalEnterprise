@@ -5,6 +5,11 @@ const TEMPLATE_KEYS = new Set([
   'order_placed', 'order_status_updated', 'order_cancelled', 'out_of_stock',
   'payment_received', 'out_for_delivery', 'delivered',
 ]);
+const DEFAULT_TEMPLATE_NAMES = {
+  order_placed: 'order_processing',
+  payment_received: 'royal_payment_received',
+  delivered: 'royal_order_delivered',
+};
 
 function config() {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -16,10 +21,10 @@ function config() {
 }
 
 function templateNames() {
-  if (!process.env.WHATSAPP_TEMPLATE_NAMES) return {};
+  if (!process.env.WHATSAPP_TEMPLATE_NAMES) return DEFAULT_TEMPLATE_NAMES;
   const names = JSON.parse(process.env.WHATSAPP_TEMPLATE_NAMES);
   if (!names || typeof names !== 'object' || Array.isArray(names)) throw new Error('WHATSAPP_TEMPLATE_NAMES must be a JSON object');
-  return names;
+  return { ...DEFAULT_TEMPLATE_NAMES, ...names };
 }
 
 function currency(value) {
@@ -35,6 +40,7 @@ function valuesFor(order) {
     TOTAL: currency(order.total),
     PAYMENT_STATUS: order.payment_status === 'PAYMENT_PENDING' ? 'Payment pending' : String(order.payment_status || '').replaceAll('_', ' ').toLowerCase(),
     STATUS: String(order.order_status || '').replaceAll('_', ' ').toLowerCase(),
+    DELIVERY_TIME: process.env.WHATSAPP_DELIVERY_TIME || '',
     TRACK_URL: `${siteUrl}/track-order?id=${encodeURIComponent(order.order_code || '')}`,
   };
 }
@@ -64,6 +70,9 @@ export async function sendOrderTemplate(order, key = 'order_placed') {
     if (!/^[a-z0-9_]+$/.test(templateName)) return { status: 'failed', reason: 'invalid_template_name' };
     const values = valuesFor(order);
     const placeholders = [...templateResult.data.body.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
+    if (placeholders.some((name) => values[name] == null || values[name] === '')) {
+      return { status: 'failed', reason: 'missing_template_parameter' };
+    }
     const parameters = placeholders.map((name) => ({ type: 'text', text: String(values[name] ?? `{${name}}`).slice(0, 1024) }));
     const requestBody = {
       messaging_product: 'whatsapp',
@@ -72,7 +81,7 @@ export async function sendOrderTemplate(order, key = 'order_placed') {
       type: 'template',
       template: {
         name: templateName,
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en_US' },
+        language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en' },
         ...(parameters.length ? { components: [{ type: 'body', parameters }] } : {}),
       },
     };

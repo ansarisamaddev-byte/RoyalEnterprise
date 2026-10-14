@@ -7,14 +7,14 @@ import { useAsync } from '../hooks/useAsync.js';
 import { api } from '../services/api.js';
 import { formatDate, formatINR } from '../utils/format.js';
 import { PAYMENT_STATUS_LABEL } from '../utils/status.js';
-import { buildOrderMessage, waLink } from '../utils/whatsapp.js';
+import { waLink } from '../utils/whatsapp.js';
 
 export default function OrderSuccess() {
   const { orderId } = useParams();
   const location = useLocation();
   const [params] = useSearchParams();
   const token = params.get('t');
-  const { settings, orderPlacedTemplate } = useSettings();
+  const { settings } = useSettings();
   const { data: o, loading, error, retry } = useAsync(() => api.getOrder(orderId, token), [orderId, token]);
 
   if (loading) return <div className="container page"><Loading text="Loading order..." /></div>;
@@ -25,17 +25,16 @@ export default function OrderSuccess() {
     </div>
   );
 
-  const message = buildOrderMessage(o, orderPlacedTemplate);
-  const toMe = waLink(o.whatsapp || o.mobile, message);
   const toStore = waLink(settings.store_whatsapp, `Hello ${settings.store_name}, I just placed order ${o.order_code} (${formatINR(o.total)}). Please confirm.`);
   const whatsappStatus = location.state?.whatsappDelivery?.status;
 
   return (
     <div className="container page success-wrap">
       <div className="card card-pad" style={{ textAlign: 'center' }}>
+        <div className="success-confetti" aria-hidden="true">🎉 ✨ 🎊</div>
         <div className="success-icon"><Icon name="check" size={34} strokeWidth={3} /></div>
-        <h1 style={{ fontSize: 22 }}>Order Placed Successfully! 🎉</h1>
-        <p className="muted" style={{ marginTop: 4 }}>Your order has been received.</p>
+        <h1 style={{ fontSize: 22 }}>Thank You for Your Order! 🎉</h1>
+        <p className="muted" style={{ marginTop: 4 }}>Your order is confirmed. Our team will contact you on WhatsApp shortly.</p>
         <p style={{ marginTop: 8, fontSize: 16 }}>Order ID: <b>{o.order_code}</b></p>
       </div>
 
@@ -67,23 +66,20 @@ export default function OrderSuccess() {
 
       <div className="alert alert-note" style={{ marginTop: 14 }}>
         <b>Payment Status: {PAYMENT_STATUS_LABEL[o.payment_status]}</b><br />
-        Our team will contact you shortly to confirm payment and delivery.
+        No online payment is needed now. Our team will contact you on WhatsApp to confirm payment details and delivery.
       </div>
 
       <div className={`alert ${whatsappStatus === 'sent' ? 'alert-note' : 'alert-error'}`} style={{ marginTop: 10 }} role="status">
         {whatsappStatus === 'sent'
           ? 'Your order confirmation was submitted to WhatsApp Business for delivery.'
-          : whatsappStatus === 'not_requested'
-            ? 'WhatsApp confirmation was not requested. You can share the order details below.'
-            : whatsappStatus === 'not_configured'
-              ? 'Automatic WhatsApp delivery is not configured yet. You can share the confirmation below.'
+          : whatsappStatus === 'not_configured'
+              ? 'Automatic WhatsApp delivery is not configured yet. Our team will contact you directly.'
               : whatsappStatus === 'failed'
-                ? 'We could not send the automatic WhatsApp confirmation. Your order is safe; you can share it below.'
-                : 'Your order is confirmed. Use the WhatsApp option below to share the details.'}
+                ? 'We could not send the automatic WhatsApp confirmation. Your order is safe; our team will contact you.'
+                : 'Your order is confirmed. Our team will contact you on WhatsApp.'}
       </div>
 
       <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-        <a className="btn btn-green-solid btn-lg" href={toMe} target="_blank" rel="noopener noreferrer"><Icon name="whatsapp" size={18} />Share order on WhatsApp</a>
         {settings.store_whatsapp && <a className="btn btn-green" href={toStore} target="_blank" rel="noopener noreferrer">Chat with {settings.store_name}</a>}
         <Link className="btn btn-primary btn-lg" to={`/track-order?id=${o.order_code}`}>Track My Order</Link>
         <Link className="btn btn-outline" to="/">Continue Shopping</Link>

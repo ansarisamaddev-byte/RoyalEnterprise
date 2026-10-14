@@ -5,11 +5,14 @@ import ProductImage from '../components/ProductImage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
 import { formatINR, isValidMobile } from '../utils/format.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { Summary } from './Cart.jsx';
 
 const EMPTY = { fullName: '', mobile: '', whatsapp: '', email: '', address: '', area: '', city: '', pincode: '', note: '' };
+const DEFAULT_DELIVERY_CITIES = ['Mau', 'Bhiti', 'Muhamdabaad', 'Ghosi'];
+const DEFAULT_DELIVERY_PINCODES = ['123456', '456781', '346578', '432987'];
 
-function check(f, sameWa) {
+function check(f, sameWa, deliveryCities, deliveryPincodes) {
   const e = {};
   if (f.fullName.trim().length < 2) e.fullName = 'Please enter your full name';
   if (!isValidMobile(f.mobile)) e.mobile = 'Enter a valid 10-digit mobile number';
@@ -17,8 +20,8 @@ function check(f, sameWa) {
   if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = 'Enter a valid email address';
   if (f.address.trim().length < 5) e.address = 'Please enter your full address';
   if (!f.area.trim()) e.area = 'Please enter your area / locality';
-  if (!f.city.trim()) e.city = 'Please enter your city';
-  if (!/^\d{6}$/.test(f.pincode.trim())) e.pincode = 'Enter a valid 6-digit PIN code';
+  if (!deliveryCities.includes(f.city)) e.city = 'Select a city where we currently deliver';
+  if (!deliveryPincodes.includes(f.pincode)) e.pincode = 'Select a PIN code where we currently deliver';
   return e;
 }
 
@@ -34,13 +37,15 @@ function Field({ id, label, error, optional, children }) {
 
 export default function Checkout() {
   const { items, subtotal, delivery, total, clear } = useCart();
+  const { settings } = useSettings();
   const nav = useNavigate();
   const [f, setF] = useState(EMPTY);
   const [sameWa, setSameWa] = useState(true);
-  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [errors, setErrors] = useState({});
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState('');
+  const deliveryCities = Array.isArray(settings.delivery_cities) ? settings.delivery_cities.map(String) : DEFAULT_DELIVERY_CITIES;
+  const deliveryPincodes = Array.isArray(settings.delivery_pincodes) ? settings.delivery_pincodes.map(String) : DEFAULT_DELIVERY_PINCODES;
 
   if (!items.length && !placing) return <Navigate to="/cart" replace />;
 
@@ -50,7 +55,7 @@ export default function Checkout() {
   const submit = async (e) => {
     e.preventDefault();
     setFormError('');
-    const errs = check(f, sameWa);
+    const errs = check(f, sameWa, deliveryCities, deliveryPincodes);
     setErrors(errs);
     if (Object.keys(errs).length) {
       document.getElementById(Object.keys(errs)[0])?.focus();
@@ -61,7 +66,6 @@ export default function Checkout() {
       const order = await api.createOrder({
         ...f,
         whatsapp: sameWa ? f.mobile : f.whatsapp,
-        whatsappOptIn,
         items: items.map((i) => ({ productId: i.id, quantity: i.qty })),
       });
       clear();
@@ -91,8 +95,18 @@ export default function Checkout() {
             <Field id="email" label="Email" optional error={errors.email}><input {...props('email')} type="email" autoComplete="email" placeholder="you@example.com" /></Field>
             <div className="full"><Field id="address" label="Address" error={errors.address}><input {...props('address')} autoComplete="street-address" placeholder="House no., street, landmark" /></Field></div>
             <Field id="area" label="Area / Locality" error={errors.area}><input {...props('area')} /></Field>
-            <Field id="city" label="City" error={errors.city}><input {...props('city')} autoComplete="address-level2" /></Field>
-            <Field id="pincode" label="PIN Code" error={errors.pincode}><input {...props('pincode')} inputMode="numeric" maxLength={6} autoComplete="postal-code" /></Field>
+            <Field id="city" label="City" error={errors.city}>
+              <select {...props('city')} autoComplete="address-level2">
+                <option value="">Select your city</option>
+                {deliveryCities.map((city) => <option key={city} value={city}>{city}</option>)}
+              </select>
+            </Field>
+            <Field id="pincode" label="PIN Code" error={errors.pincode}>
+              <select {...props('pincode')} autoComplete="postal-code">
+                <option value="">Select your PIN code</option>
+                {deliveryPincodes.map((pincode) => <option key={pincode} value={pincode}>{pincode}</option>)}
+              </select>
+            </Field>
             <div className="full">
               <Field id="note" label="Order Note" optional>
                 <textarea id="note" className="textarea" value={f.note} onChange={set('note')} maxLength={500} placeholder="Any special instructions for the order?" />
@@ -112,9 +126,8 @@ export default function Checkout() {
           ))}
           <div style={{ marginTop: 8 }}><Summary subtotal={subtotal} delivery={delivery} total={total} /></div>
           <div className="alert alert-note" style={{ margin: '12px 0' }}>
-            <Icon name="whatsapp" size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />No online payment now. Our team will contact you to confirm payment and delivery.
+            <Icon name="whatsapp" size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />No online payment is needed now. Place your order and our team will contact you on WhatsApp to confirm your order, payment details, and delivery.
           </div>
-          <label className="checkbox" style={{ alignItems: 'flex-start', marginBottom: 12 }}><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} /><span>Send my order confirmation and updates to my WhatsApp number. I agree to receive transactional messages.</span></label>
           <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={placing}>{placing ? 'Placing order...' : `Place Order · ${formatINR(total)}`}</button>
         </aside>
       </form>

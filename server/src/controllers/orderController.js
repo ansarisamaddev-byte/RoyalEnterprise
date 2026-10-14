@@ -2,10 +2,13 @@ import { asyncHandler, HttpError } from '../utils/httpError.js';
 import { normalizeMobile } from '../utils/phone.js';
 import { createOrder, getOrderWithToken, trackOrder } from '../services/orderService.js';
 import { sendOrderTemplate } from '../services/whatsappService.js';
+import { getSetting } from '../services/settingsService.js';
 
 const str = (v) => String(v ?? '').trim();
+const DEFAULT_DELIVERY_CITIES = ['Mau', 'Bhiti', 'Muhamdabaad', 'Ghosi'];
+const DEFAULT_DELIVERY_PINCODES = ['123456', '456781', '346578', '432987'];
 
-function validate(b) {
+function validate(b, deliveryCities, deliveryPincodes) {
   const f = {};
   const fullName = str(b.fullName);
   const mobile = normalizeMobile(b.mobile);
@@ -23,8 +26,8 @@ function validate(b) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) f.email = 'Enter a valid email address';
   if (address.length < 5) f.address = 'Please enter your full address';
   if (!area) f.area = 'Please enter your area / locality';
-  if (!city) f.city = 'Please enter your city';
-  if (!/^\d{6}$/.test(pincode)) f.pincode = 'Enter a valid 6-digit PIN code';
+  if (!deliveryCities.includes(city)) f.city = 'Select a city where we currently deliver';
+  if (!deliveryPincodes.includes(pincode)) f.pincode = 'Select a PIN code where we currently deliver';
 
   const items = Array.isArray(b.items) ? b.items : [];
   const cleanItems = items
@@ -33,15 +36,19 @@ function validate(b) {
   if (!cleanItems.length) f.items = 'Your cart is empty';
 
   if (Object.keys(f).length) throw new HttpError(400, 'Please fix the highlighted fields', f);
-  return { fullName, mobile, whatsapp, email, address, area, city, pincode, note, items: cleanItems, whatsappOptIn: b.whatsappOptIn === true };
+  return { fullName, mobile, whatsapp, email, address, area, city, pincode, note, items: cleanItems };
 }
 
 export const create = asyncHandler(async (req, res) => {
-  const input = validate(req.body || {});
+  const [deliveryCities, deliveryPincodes] = await Promise.all([
+    getSetting('delivery_cities', DEFAULT_DELIVERY_CITIES),
+    getSetting('delivery_pincodes', DEFAULT_DELIVERY_PINCODES),
+  ]);
+  const cities = Array.isArray(deliveryCities) ? deliveryCities.map(String) : DEFAULT_DELIVERY_CITIES;
+  const pincodes = Array.isArray(deliveryPincodes) ? deliveryPincodes.map(String) : DEFAULT_DELIVERY_PINCODES;
+  const input = validate(req.body || {}, cities, pincodes);
   const order = await createOrder(input);
-  const whatsappDelivery = input.whatsappOptIn
-    ? await sendOrderTemplate(order, 'order_placed')
-    : { status: 'not_requested' };
+  const whatsappDelivery = await sendOrderTemplate(order, 'order_placed');
   res.status(201).json({ ...order, whatsapp_delivery: whatsappDelivery });
 });
 

@@ -96,7 +96,6 @@ export async function createOrder(input) {
         subtotal,
         delivery_charge: delivery,
         total,
-        whatsapp_opt_in: input.whatsappOptIn,
         order_status: 'ORDER_PLACED',
         payment_status: 'PAYMENT_PENDING',
         access_token: accessToken,

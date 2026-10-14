@@ -35,6 +35,8 @@ insert into settings (key,value) values
  ('store_address','"Shop No. 12, Main Market Road, Near Post Office, Your City - 123456"'),
  ('currency','"INR"'),
  ('delivery_charge','50'),
+ ('delivery_cities','["Mau","Bhiti","Muhamdabaad","Ghosi"]'),
+ ('delivery_pincodes','["123456","456781","346578","432987"]'),
  ('business_hours','"Mon – Sat: 10:00 AM – 9:00 PM  |  Sunday: 10:00 AM – 2:00 PM"'),
  ('default_offer','{"enabled":true,"title":"Festive Offer","text":"Free tempered glass & cover on every mobile purchase.","image_url":""}'),
  ('about_page_content','{
@@ -80,6 +82,65 @@ Track your order:
  ('out_for_delivery','Out for delivery','Hello {CUSTOMER_NAME}, your order {ORDER_ID} is out for delivery.',5),
  ('delivered','Delivered','Hello {CUSTOMER_NAME}, your order {ORDER_ID} has been delivered. Thank you for shopping with Royal Enterprise!',6)
 on conflict (key) do nothing;
+
+---- Update query for template whatsapp 
+
+UPDATE admin_message_templates 
+SET body = CASE key
+  WHEN 'order_placed' THEN 
+'Hello {CUSTOMER_NAME},
+
+Your order has been placed successfully with Royal Enterprise.
+
+Order ID: {ORDER_ID}
+
+Items:
+{ITEMS}
+
+Total: {TOTAL}
+
+Payment Status: {PAYMENT_STATUS}
+
+Our team will call or message you on this WhatsApp number shortly for order confirmation and payment details.
+
+Thank you for shopping with Royal Enterprise!'
+
+  WHEN 'order_status_updated' THEN 
+'Hello {CUSTOMER_NAME},
+
+Your Royal Enterprise order {ORDER_ID} status has been updated to {STATUS}.'
+
+  WHEN 'payment_received' THEN 
+'Hello {CUSTOMER_NAME},
+
+Your payment of {TOTAL} for order {ORDER_ID} has been received successfully!
+
+Your order is being processed and will be delivered within {DELIVERY_TIME}.
+
+Thank you for shopping with Royal Enterprise!'
+
+  WHEN 'delivered' THEN 
+'Hello {CUSTOMER_NAME},
+
+Your order {ORDER_ID} has been delivered successfully! 🎉
+
+We hope you love your purchase. Thank you for choosing Royal Enterprise!
+
+If you have any questions or feedback, feel free to message us directly here on WhatsApp.'
+
+  ELSE body
+END
+WHERE key IN ('order_placed', 'order_status_updated', 'payment_received', 'delivered');
+
+
+
+
+
+
+
+
+
+
 
 -- ---------- sample products (placeholder images: replace with your own URLs) ----------
 insert into products (name,slug,category_id,subcategory_id,brand,description,price,original_price,discount,stock,sku,thumbnail_url,image_urls,highlights,badge,is_featured)

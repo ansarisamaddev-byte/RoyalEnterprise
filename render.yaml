@@ -12,6 +12,20 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v22.0
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: en
+      - key: WHATSAPP_TEMPLATE_NAMES
+        value: '{"order_placed":"order_processing","payment_received":"royal_payment_received","delivered":"royal_order_delivered"}'
+      - key: WHATSAPP_DELIVERY_TIME
+        value: '24 hours'
+      - key: PUBLIC_SITE_URL
+        sync: false
       # Phase 2 (add after merging the admin module):
       # - key: ADMIN_USERNAME
       #   sync: false
