@@ -1,10 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import { normalizeMobile } from '../utils/phone.js';
 
-const TEMPLATE_KEYS = new Set([
-  'order_placed', 'order_status_updated', 'order_cancelled', 'out_of_stock',
-  'payment_received', 'out_for_delivery', 'delivered',
-]);
+const TEMPLATE_KEYS = new Set(['order_placed', 'payment_received', 'delivered']);
 const DEFAULT_TEMPLATE_NAMES = {
   order_placed: 'order_processing',
   payment_received: 'royal_payment_received',
@@ -102,8 +99,9 @@ export async function sendOrderTemplate(order, key = 'order_placed') {
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      console.warn(`WhatsApp template send failed (${key}, HTTP ${response.status}, provider code ${payload.error?.code ?? 'unknown'})`);
-      return { status: 'failed', reason: 'provider_rejected' };
+      const providerCode = payload.error?.code ?? null;
+      console.warn(`WhatsApp template send failed (${key}, HTTP ${response.status}, provider code ${providerCode ?? 'unknown'})`);
+      return { status: 'failed', reason: 'provider_rejected', provider_code: providerCode };
     }
     return { status: 'sent', message_id: payload.messages?.[0]?.id || null };
   } catch (error) {
