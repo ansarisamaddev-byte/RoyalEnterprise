@@ -48,15 +48,62 @@ function categoryData(body, creating) {
   return data;
 }
 
-export async function getOverview() {
-  const [products, categories, orders, pending] = await Promise.all([
+function trendBuckets(period) {
+  const now = new Date();
+  if (period === 'day') {
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return Array.from({ length: 12 }, (_, i) => {
+      const from = new Date(start.getTime() + i * 2 * 60 * 60 * 1000);
+      const to = new Date(from.getTime() + 2 * 60 * 60 * 1000);
+      return { from, to, label: new Intl.DateTimeFormat('en-IN', { hour: 'numeric' }).format(from) };
+    });
+  }
+  if (period === 'week') {
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    return Array.from({ length: 7 }, (_, i) => {
+      const from = new Date(today.getTime() - (6 - i) * 86400000);
+      return { from, to: new Date(from.getTime() + 86400000), label: new Intl.DateTimeFormat('en-IN', { weekday: 'short', timeZone: 'UTC' }).format(from) };
+    });
+  }
+  if (period === 'year') {
+    const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+    return Array.from({ length: 12 }, (_, i) => {
+      const from = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + i, 1));
+      const to = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + i + 1, 1));
+      return { from, to, label: new Intl.DateTimeFormat('en-IN', { month: 'short', timeZone: 'UTC' }).format(from) };
+    });
+  }
+  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
+  return Array.from({ length: 6 }, (_, i) => {
+    const from = new Date(first.getTime() + i * 5 * 86400000);
+    return { from, to: new Date(from.getTime() + 5 * 86400000), label: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(from) };
+  });
+}
+
+export async function getOverview(period = 'month') {
+  const buckets = trendBuckets(['day', 'week', 'month', 'year'].includes(period) ? period : 'month');
+  const [products, categories, orders, pending, trend] = await Promise.all([
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('categories').select('id', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('orders').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('order_status', 'ORDER_PLACED'),
+    Promise.all(buckets.map(async (bucket) => {
+      const result = await supabase.from('orders').select('id', { count: 'exact', head: true })
+        .gte('created_at', bucket.from.toISOString()).lt('created_at', bucket.to.toISOString());
+      if (result.error) throw result.error;
+      return { label: bucket.label, count: result.count || 0 };
+    })),
   ]);
   for (const result of [products, categories, orders, pending]) if (result.error) throw result.error;
-  return { active_products: products.count, active_categories: categories.count, orders: orders.count, new_orders: pending.count };
+  const periodOrders = trend.reduce((sum, bucket) => sum + bucket.count, 0);
+  return {
+    active_products: products.count,
+    active_categories: categories.count,
+    orders: orders.count,
+    new_orders: pending.count,
+    period_orders: periodOrders,
+    trend,
+  };
 }
 
 export async function listProducts() {
@@ -106,7 +153,7 @@ export async function deleteSubcategory(categoryId, id) {
 
 export async function listOrders() {
   return unwrap(await supabase.from('orders')
-    .select('id,order_code,customer_name,mobile,whatsapp,whatsapp_opt_in,email,address,area,city,pincode,note,subtotal,delivery_charge,total,order_status,payment_status,created_at,updated_at,order_items(id,product_name,thumbnail_url,unit_price,quantity,line_total)')
+    .select('id,order_code,customer_name,mobile,whatsapp,email,address,area,city,pincode,note,subtotal,delivery_charge,total,order_status,payment_status,created_at,updated_at,order_items(id,product_name,thumbnail_url,unit_price,quantity,line_total)')
     .order('created_at', { ascending: false }).limit(100));
 }
 
@@ -129,6 +176,16 @@ export async function saveSettings(settings) {
   const rows = Object.entries(settings).map(([key, value]) => {
     if (!key.trim() || value === undefined) throw new HttpError(400, 'Invalid setting');
     if (key === 'delivery_charge' && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new HttpError(400, 'Delivery charge must be a non-negative number');
+    if (['delivery_cities', 'delivery_pincodes'].includes(key)) {
+      if (!Array.isArray(value) || !value.length || value.some((item) => typeof item !== 'string' || !item.trim())) {
+        throw new HttpError(400, `${key} must contain at least one valid value`);
+      }
+      const normalized = [...new Set(value.map((item) => item.trim()))];
+      if (key === 'delivery_pincodes' && normalized.some((pincode) => !/^\d{6}$/.test(pincode))) {
+        throw new HttpError(400, 'Delivery PIN codes must be 6 digits');
+      }
+      value = normalized;
+    }
     return { key, value };
   });
   if (!rows.length) throw new HttpError(400, 'No settings provided');
@@ -202,10 +259,9 @@ export async function saveTemplate(key, body) {
 
 export async function sendOrderMessage(id, key) {
   const order = unwrap(await supabase.from('orders')
-    .select('id,order_code,customer_name,mobile,whatsapp,whatsapp_opt_in,total,order_status,payment_status')
+    .select('id,order_code,customer_name,mobile,whatsapp,total,order_status,payment_status')
     .eq('id', id).maybeSingle());
   if (!order) throw new HttpError(404, 'Order not found');
-  if (!order.whatsapp_opt_in) throw new HttpError(403, 'The customer has not opted in to WhatsApp messages');
   const rows = unwrap(await supabase.from('order_items')
     .select('product_name,quantity,line_total')
     .eq('order_id', id).order('created_at'));

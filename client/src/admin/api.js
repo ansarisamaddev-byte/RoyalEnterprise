@@ -48,7 +48,7 @@ const json = (method, body) => ({ method, body });
 
 export const adminApi = {
   login: (username, password) => request('/session', { ...json('POST', { username, password }), auth: false }),
-  overview: () => request('/overview'),
+  overview: (period = 'month') => request(`/overview?period=${encodeURIComponent(period)}`),
   products: () => request('/products'),
   createProduct: (body) => request('/products', json('POST', body)),
   updateProduct: (id, body) => request(`/products/${encodeURIComponent(id)}`, json('PATCH', body)),

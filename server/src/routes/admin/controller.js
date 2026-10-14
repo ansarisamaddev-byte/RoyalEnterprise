@@ -14,7 +14,7 @@ export const login = asyncHandler(async (req, res) => {
   res.json(session);
 });
 
-export const overview = asyncHandler(async (req, res) => res.json(await service.getOverview()));
+export const overview = asyncHandler(async (req, res) => res.json(await service.getOverview(req.query.period)));
 export const products = asyncHandler(async (req, res) => res.json({ products: await service.listProducts() }));
 export const createProduct = asyncHandler(async (req, res) => res.status(201).json(await service.saveProduct(null, bodyOf(req))));
 export const updateProduct = asyncHandler(async (req, res) => res.json(await service.saveProduct(req.params.id, bodyOf(req))));
